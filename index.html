@@ -61,7 +61,7 @@
 .observer {
   position: absolute;
   left: 38px;
-  font-size: 48px; line-height: 1;
+  font-size: 45px; line-height: 1;
 }
 /* rocket */
 .scene-rocket {
@@ -495,7 +495,7 @@ function launch(m) {
   const rocket = document.getElementById(m+'-rocket');
   const trail  = document.getElementById(m+'-trail');
   const btn    = document.getElementById(m+'-btn');
-  const total  = scene.offsetWidth - 90 - 200;
+  const total  = scene.offsetWidth - 90 - 210;
   const v      = parseFloat(document.getElementById(m+'-v').value);
   const dur    = Math.max(800, 4200*(1-v)+800);
   btn.textContent = '✨ Viajando…';
