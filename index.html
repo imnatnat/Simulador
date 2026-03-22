@@ -486,31 +486,31 @@
     if (obsEl) obsEl.style.top = (mid - 52) + 'px';
   }
 
-  // ANIMATION
-  const af = {};
-  function launch(m) {
-    resetAnim(m);
-    positionRocket(m);
-    const scene  = document.getElementById(m+'-scene');
-    const rocket = document.getElementById(m+'-rocket');
-    const trail  = document.getElementById(m+'-trail');
-    const btn    = document.getElementById(m+'-btn');
-    const total  = scene.offsetWidth - 90 - 70;
-    const v     = parseFloat(document.getElementById(m+'-v').value);
-    const dur    = Math.max(800, 4200*(1-v)+800);
-    btn.textContent = '✨ Viajando…';
-    let t0 = null;
-    function step(ts) {
-      if (!t0) t0 = ts;
-      const p = Math.min((ts-t0)/dur, 1);
-      rocket.style.left = (90 + p*total) + 'px';
-      trail.style.width = (p*total) + 'px';
-      if (p < 1) { af[m] = requestAnimationFrame(step); }
-      else { btn.textContent = '🎉 ¡Llegó!'; setTimeout(() => resetAnim(m), 1600); }
-    }
-    af[m] = requestAnimationFrame(step);
+// ANIMATION
+const af = {};
+function launch(m) {
+  resetAnim(m);
+  positionRocket(m);
+  const scene  = document.getElementById(m+'-scene');
+  const rocket = document.getElementById(m+'-rocket');
+  const trail  = document.getElementById(m+'-trail');
+  const btn    = document.getElementById(m+'-btn');
+  const total  = scene.offsetWidth - 90 - 160;
+  const v      = parseFloat(document.getElementById(m+'-v').value);
+  const dur    = Math.max(800, 4200*(1-v)+800);
+  btn.textContent = '✨ Viajando…';
+  let t0 = null;
+  function step(ts) {
+    if (!t0) t0 = ts;
+    const p = Math.min((ts-t0)/dur, 1);
+    rocket.style.left = (90 + p*total) + 'px';
+    trail.style.width = (p*total) + 'px';
+    if (p < 1) { af[m] = requestAnimationFrame(step); }
+    else { btn.textContent = '🎉 ¡Llegó!'; setTimeout(() => resetAnim(m), 1600); }
   }
-
+  af[m] = requestAnimationFrame(step);
+}
+ 
   function resetAnim(m) {
     if (af[m]) cancelAnimationFrame(af[m]);
     const r = document.getElementById(m+'-rocket');
