@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador — Longitud, Masa y Tiempo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #07080e;
+    color: #eee;
+    display: flex; flex-direction: column;
+    height: 100vh; overflow: hidden;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: #000;
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 16px; flex-shrink: 0;
+  }
+  .topbar h1 { color: white; font-size: 15px; font-weight: 600; flex: 1; }
+  .tab-btn {
+    padding: 6px 16px; border: none; border-radius: 20px;
+    font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  }
+  .tab-btn.active  { background: #e94560; color: white; }
+  .tab-btn:not(.active) { background: rgba(255,255,255,0.15); color: #ccc; }
+  .tab-btn:not(.active):hover { background: rgba(255,255,255,0.25); }
+
+  /* ── PANELS ── */
+  .panel { display: none; flex: 1; flex-direction: row; min-height: 0; }
+  .panel.active { display: flex; }
+
+  /* ── SPACE SCENE (left, fills all remaining space) ── */
+  .scene-wrap {
+    position: relative;
+    flex: 1;
+    background: #07080e;
+    overflow: hidden;
+    border-right: 1px solid rgba(255,255,255,0.07);
+  }
+
+  /* Earth/Moon centered vertically and at their horizontal edges */
+  .scene-earth {
+    position: absolute;
+    left: 30px; top: 50%; transform: translateY(-50%);
+    font-size: 74px; line-height: 1;
+    filter: drop-shadow(0 0 12px rgba(80,160,255,0.4));
+  }
+  .scene-moon {
+    position: absolute;
+    right: 30px; top: 50%; transform: translateY(-50%);
+    font-size: 60px; line-height: 1;
+    filter: drop-shadow(0 0 10px rgba(255,255,180,0.3));
+  }
+
+  /* observer on top of earth */
+  .observer {
+    position: absolute;
+    left: 38px;
+    font-size: 28px; line-height: 1;
+  }
+
+  /* rocket */
+  .scene-rocket {
+    position: absolute;
+    font-size: 41px; line-height: 1;
+    filter: drop-shadow(0 2px 8px rgba(255,140,0,0.8));
+  }
+
+  /* orange trail */
+  .trail-line {
+    position: absolute;
+    height: 3px; border-radius: 3px;
+    left: 90px; width: 0;
+    background: linear-gradient(to right, transparent, #ff8c00);
+    /* top set by JS */
+  }
+
+  /* ── RIGHT SIDEBAR ── */
+  .controls {
+    width: 260px; flex-shrink: 0;
+    background: #000;
+    display: flex; flex-direction: column;
+    gap: 10px; padding: 12px;
+    overflow-y: auto;
+  }
+
+  /* cards */
+  .ctrl-card, .results-card {
+    background: #0f0f0f;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .ctrl-card h3, .results-card h3 {
+    font-size: 10px; color: #666; margin-bottom: 10px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+
+  /* sliders */
+  .slider-row { margin: 10px 0; }
+  .slider-lbl-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+  .slider-lbl-row label { font-size: 11px; color: #aaa; }
+  .slider-lbl-row .val {
+    font-size: 11px; font-weight: 700; color: #eee;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px; padding: 2px 8px;
+    min-width: 58px; text-align: center;
+  }
+  .slider-row input[type=range] { width: 100%; accent-color: #e94560; }
+
+  /* result rows — value on top, label below */
+  .result-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; margin-top: 4px;
+  }
+  .result-cell {
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px; padding: 8px 10px;
+    border-bottom: 2px solid rgba(255,255,255,0.06);
+  }
+  .result-cell .rval { font-size: 18px; font-weight: 700; line-height: 1; }
+  .result-cell .runit { font-size: 10px; color: #555; margin-left: 2px; }
+  .result-cell .rlbl { font-size: 10px; color: #666; margin-top: 3px; }
+
+  /* theme colors */
+  .theme-L .rval { color: #5be8b0; }
+  .theme-T .rval { color: #7eb8ff; }
+  .theme-M .rval { color: #f0a060; }
+  .theme-L .result-cell { border-bottom-color: rgba(91,232,176,0.3); }
+  .theme-T .result-cell { border-bottom-color: rgba(126,184,255,0.3); }
+  .theme-M .result-cell { border-bottom-color: rgba(240,160,96,0.3); }
+
+  /* buttons */
+  .launch-area { display: flex; gap: 8px; margin-top: 10px; }
+  .btn-launch {
+    flex: 1; padding: 8px 0; border: none; border-radius: 20px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    background: #e94560; color: white; transition: opacity 0.15s;
+  }
+  .btn-launch:hover { opacity: 0.85; }
+  .btn-reset {
+    padding: 8px 12px; border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 20px; cursor: pointer;
+    background: rgba(255,255,255,0.05); color: #aaa; font-size: 14px;
+  }
+  .btn-reset:hover { background: rgba(255,255,255,0.1); }
+
+  /* formula — at the bottom of sidebar */
+  .formula-box {
+    margin-top: auto;
+    background: rgba(126,184,255,0.07);
+    border: 1px solid rgba(126,184,255,0.15);
+    border-radius: 10px; padding: 10px 12px;
+    font-size: 11px; color: #7eb8ff;
+    line-height: 1.6; text-align: center;
+  }
+  .formula-box b { color: #a8d4ff; font-size: 13px; }
+
+  /* length/mass bars */
+  .bar-viz { margin: 8px 0; }
+  .bv-row { margin: 7px 0; }
+  .bv-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+  .bv-label { font-size: 10px; color: #666; }
+  .bv-val-L { font-size: 11px; font-weight: 700; color: #5be8b0; }
+  .bv-val-M { font-size: 11px; font-weight: 700; color: #f0a060; }
+  .bv-track { height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+  .bv-fill  { height: 100%; border-radius: 4px; transition: width 0.3s; }
+  .bv-rest  { background: rgba(91,232,176,0.35); }
+  .bv-moved { background: rgba(91,232,176,0.65); }
+
+  /* clock overlay — top center */
+  .clock-overlay {
+    position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 20px;
+    background: rgba(0,0,0,0.55);
+    padding: 8px 20px; border-radius: 10px;
+    backdrop-filter: blur(4px);
+  }
+  .clock-box { text-align: center; }
+  .clock-box .ck-face { font-size: 26px; }
+  .clock-box .ck-lbl  { font-size: 10px; color: #888; margin-top: 2px; }
+  .clock-box .ck-val  { font-size: 12px; font-weight: 700; color: #7eb8ff; }
+
+  /* mass overlay — top center */
+  .mass-overlay {
+    position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+    text-align: center;
+    background: rgba(0,0,0,0.55);
+    padding: 8px 24px; border-radius: 10px;
+    backdrop-filter: blur(4px);
+    white-space: nowrap;
+  }
+  .mass-overlay .mo-lbl { font-size: 10px; color: #f0a060; letter-spacing: 0.1em; font-weight: 600; }
+  .mass-overlay .mo-val { font-size: 26px; font-weight: 700; color: white; margin: 2px 0; }
+  .mass-overlay .mo-sub { font-size: 10px; color: #555; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <h1>🚀 Longitud, Masa y Tiempo Relativista</h1>
+  <button class="tab-btn active" onclick="showTab(0,this)">📏 Longitud</button>
+  <button class="tab-btn" onclick="showTab(1,this)">⏱️ Tiempo</button>
+  <button class="tab-btn" onclick="showTab(2,this)">⚖️ Masa</button>
+</div>
+
+<!-- ══════ LONGITUD ══════ -->
+<div class="panel active theme-L" id="p0">
+  <div class="scene-wrap" id="L-scene">
+    <div class="scene-earth">🌍</div>
+    <div class="observer" id="L-obs">🧍</div>
+    <div class="trail-line" id="L-trail"></div>
+    <div class="scene-rocket" id="L-rocket">🚀</div>
+    <div class="scene-moon">🌕</div>
+  </div>
+  <div class="controls">
+    <div class="ctrl-card">
+      <h3>⚙️ Variables</h3>
+      <div class="slider-row">
+        <div class="slider-lbl-row">
+          <label>L2 — longitud sin movimiento</label>
+          <span class="val" id="L-L0d">200 m</span>
+        </div>
+        <input type="range" id="L-L0" min="10" max="500" step="10" value="200" oninput="calcL()">
+      </div>
+      <div class="slider-row">
+        <div class="slider-lbl-row">
+          <label>v — velocidad</label>
+          <span class="val" id="L-vd">0.85c</span>
+        </div>
+        <input type="range" id="L-v" min="0.01" max="0.99" step="0.01" value="0.85" oninput="calcL()">
+      </div>
+      <div class="bar-viz">
+        <div class="bv-row">
+          <div class="bv-header">
+            <span class="bv-label">🚀 L2 (sin movimiento respecto al objeto)</span>
+            <span class="bv-val-L" id="L-b0-val">200 m</span>
+          </div>
+          <div class="bv-track"><div class="bv-fill bv-rest" id="L-b0" style="width:100%"></div></div>
+        </div>
+        <div class="bv-row">
+          <div class="bv-header">
+            <span class="bv-label">🌍 L1 (con movimiento respecto al observador)</span>
+            <span class="bv-val-L" id="L-b1-val">105 m</span>
+          </div>
+          <div class="bv-track"><div class="bv-fill bv-moved" id="L-b1" style="width:52%"></div></div>
+        </div>
+      </div>
+      <div class="launch-area">
+        <button class="btn-launch" id="L-btn" onclick="launch('L')">▶ Lanzar</button>
+        <button class="btn-reset" onclick="resetAnim('L')">↺</button>
+      </div>
+    </div>
+
+    <div class="results-card theme-L">
+      <h3>📊 Resultados</h3>
+      <div class="result-grid">
+        <div class="result-cell">
+          <div><span class="rval" id="L-r0">200</span><span class="runit">m</span></div>
+          <div class="rlbl">L2 — sin movimiento</div>
+        </div>
+        <div class="result-cell">
+          <div><span class="rval" id="L-r1">105</span><span class="runit">m</span></div>
+          <div class="rlbl">L1 — con movimiento</div>
+        </div>
+        <div class="result-cell">
+          <div><span class="rval" id="L-rg">0.527</span></div>
+          <div class="rlbl">√(1 − v²/c²)</div>
+        </div>
+        <div class="result-cell">
+          <div><span class="rval" id="L-rpct">47.3</span><span class="runit">%</span></div>
+          <div class="rlbl">Contracción</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="formula-box">
+      <b>L1 = L2 · √(1 − v²/c²)</b><br>
+      L1 = longitud con movimiento<br>
+      L2 = longitud sin movimiento<br>
+      <span style="color:#555">Contracción de longitud</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TIEMPO ══════ -->
+<div class="panel theme-T" id="p1">
+  <div class="scene-wrap" id="T-scene">
+    <div class="scene-earth">🌍</div>
+    <div class="observer">🧍</div>
+    <div class="trail-line" id="T-trail"></div>
+    <div class="scene-rocket" id="T-rocket">🚀</div>
+    <div class="scene-moon">🌕</div>
+    <div class="clock-overlay">
+      <div class="clock-box">
+        <div class="ck-face" id="T-clk0">🕐</div>
+        <div class="ck-lbl">T2 — Nave</div>
+        <div class="ck-val" id="T-cv0">35 s</div>
+      </div>
+      <div class="clock-box">
+        <div class="ck-face" id="T-clk1">🕒</div>
+        <div class="ck-lbl">T1 — Tierra</div>
+        <div class="ck-val" id="T-cv1">46 s</div>
+      </div>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="ctrl-card">
+      <h3>⚙️ Variables</h3>
+      <div class="slider-row">
+        <div class="slider-lbl-row">
+          <label>T2 — tiempo sin movimiento (nave)</label>
+          <span class="val" id="T-T0d">35 s</span>
+        </div>
+        <input type="range" id="T-T0" min="1" max="200" step="1" value="35" oninput="calcT()">
+      </div>
+      <div class="slider-row">
+        <div class="slider-lbl-row">
+          <label>v — velocidad</label>
+          <span class="val" id="T-vd">0.65c</span>
+        </div>
+        <input type="range" id="T-v" min="0.01" max="0.99" step="0.01" value="0.65" oninput="calcT()">
+      </div>
+      <div class="launch-area">
+        <button class="btn-launch" id="T-btn" onclick="launch('T')">▶ Lanzar</button>
+        <button class="btn-reset" onclick="resetAnim('T')">↺</button>
+      </div>
+    </div>
+
+    <div class="results-card theme-T">
+      <h3>📊 Resultados</h3>
+      <div class="result-grid">
+        <div class="result-cell">
+          <div><span class="rval" id="T-r0">35</span><span class="runit">s</span></div>
+          <div class="rlbl">T2 — nave</div>
+        </div>
+        <div class="result-cell">
+          <div><span class="rval" id="T-r1">46</span><span class="runit">s</span></div>
+          <div class="rlbl">T1 — Tierra</div>
+        </div>
+        <div class="result-cell">
+          <div><span class="rval" id="T-rg">0.760</span></div>
+          <div class="rlbl">√(1 − v²/c²)</div>
+        </div>
+        <div class="result-cell">
+          <div><span class="rval" id="T-rdt">11</span><span class="runit">s</span></div>
+          <div class="rlbl">Diferencia</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="formula-box">
+      <b>T1 = T2 / √(1 − v²/c²)</b><br>
+      T2 = tiempo sin movimiento (nave)<br>
+      T1 = tiempo con movimiento (Tierra)<br>
+      <span style="color:#555">Dilatación del tiempo</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MASA ══════ -->
+<div class="panel theme-M" id="p2">
+  <div class="scene-wrap" id="M-scene">
+    <div class="scene-earth">🌍</div>
+    <div class="observer">🧍</div>
+    <div class="trail-line" id="M-trail"></div>
+    <div class="scene-rocket" id="M-rocket">🚀</div>
+    <div class="scene-moon">🌕</div>
+    <div class="mass-overlay">
+      <div class="mo-lbl">m1 — MASA CON MOVIMIENTO</div>
+      <div class="mo-val" id="M-scene-val">50 kg</div>
+      <div class="mo-sub">medida por observador externo</div>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="ctrl-card">
+      <h3>⚙️ Variables</h3>
+      <div class="slider-row">
+        <div class="slider-lbl-row">
+          <label>m2 — masa en reposo</label>
+          <span class="val" id="M-m0d">30 kg</span>
+        </div>
+        <input type="range" id="M-m0" min="1" max="200" step="1" value="30" oninput="calcM()">
+      </div>
+      <div class="slider-row">
+        <div class="slider-lbl-row">
+          <label>v — velocidad</label>
+          <span class="val" id="M-vd">0.80c</span>
+        </div>
+        <input type="range" id="M-v" min="0.01" max="0.99" step="0.01" value="0.80" oninput="calcM()">
+      </div>
+      <div class="bar-viz">
+        <div class="bv-row">
+          <div class="bv-header">
+            <span class="bv-label">😴 m2 — masa en reposo</span>
+            <span class="bv-val-M" id="M-b0-val">30 kg</span>
+          </div>
+          <div class="bv-track"><div class="bv-fill" style="background:rgba(240,160,96,0.35);width:60%" id="M-b0"></div></div>
+        </div>
+        <div class="bv-row">
+          <div class="bv-header">
+            <span class="bv-label">🚀 m1 — masa con movimiento</span>
+            <span class="bv-val-M" id="M-b1-val">50 kg</span>
+          </div>
+          <div class="bv-track"><div class="bv-fill" style="background:rgba(240,160,96,0.7);width:100%" id="M-b1"></div></div>
+        </div>
+      </div>
+      <div class="launch-area">
+        <button class="btn-launch" id="M-btn" onclick="launch('M')">▶ Lanzar</button>
+        <button class="btn-reset" onclick="resetAnim('M')">↺</button>
+      </div>
+    </div>
+
+    <div class="results-card theme-M">
+      <h3>📊 Resultados</h3>
+      <div class="result-grid">
+        <div class="result-cell">
+          <div><span class="rval" id="M-r0">30</span><span class="runit">kg</span></div>
+          <div class="rlbl">m2 — reposo</div>
+        </div>
+        <div class="result-cell">
+          <div><span class="rval" id="M-r1">50</span><span class="runit">kg</span></div>
+          <div class="rlbl">m1 — movimiento</div>
+        </div>
+        <div class="result-cell">
+          <div><span class="rval" id="M-rg">0.600</span></div>
+          <div class="rlbl">√(1 − v²/c²)</div>
+        </div>
+        <div class="result-cell">
+          <div><span class="rval" id="M-rdm">20</span><span class="runit">kg</span></div>
+          <div class="rlbl">Diferencia</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="formula-box">
+      <b>m1 = m2 / √(1 − v²/c²)</b><br>
+      m2 = masa en reposo<br>
+      m1 = masa con movimiento<br>
+      <span style="color:#555">Masa relativista</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  function gam(vp) { const b=vp/100; return 1/Math.sqrt(1-b*b); }
+  function f(n,d=2) { return isFinite(n) ? parseFloat(n.toFixed(d)) : '∞'; }
+
+  // ── TABS ──
+  function showTab(i, btn) {
+    document.querySelectorAll('.panel').forEach((p,j) => p.classList.toggle('active', j===i));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    positionRocket(i===0?'L':i===1?'T':'M');
+  }
+
+  // ── STARS — fills the whole scene ──
+  function makeStars(id) {
+    const el = document.getElementById(id);
+    for (let i = 0; i < 80; i++) {
+      const s = document.createElement('div');
+      const sz = Math.random() < 0.15 ? 2.5 : Math.random() < 0.4 ? 1.5 : 1;
+      const op = 0.25 + Math.random() * 0.75;
+      s.style.cssText = `position:absolute;width:${sz}px;height:${sz}px;border-radius:50%;background:rgba(255,255,255,${op});top:${Math.random()*100}%;left:${Math.random()*100}%`;
+      el.appendChild(s);
+    }
+  }
+
+  // ── POSITION rocket & trail at vertical center ──
+  function positionRocket(m) {
+    const scene = document.getElementById(m+'-scene');
+    if (!scene) return;
+    const h = scene.offsetHeight;
+    const mid = Math.round(h / 2);
+    const rocketEl = document.getElementById(m+'-rocket');
+    const trailEl  = document.getElementById(m+'-trail');
+    const obsEl    = document.getElementById(m+'-obs') || scene.querySelector('.observer');
+    if (rocketEl) rocketEl.style.top = (mid - 20) + 'px';
+    if (trailEl)  trailEl.style.top  = (mid + 2)  + 'px';
+    // observer sits just above the earth
+    if (obsEl) obsEl.style.top = (mid - 52) + 'px';
+  }
+
+  // ── ANIMATION ──
+  const af = {};
+  function launch(m) {
+    resetAnim(m);
+    positionRocket(m);
+    const scene  = document.getElementById(m+'-scene');
+    const rocket = document.getElementById(m+'-rocket');
+    const trail  = document.getElementById(m+'-trail');
+    const btn    = document.getElementById(m+'-btn');
+    const total  = scene.offsetWidth - 90 - 70;
+    const v     = parseFloat(document.getElementById(m+'-v').value);
+    const dur    = Math.max(800, 4200*(1-v)+800);
+    btn.textContent = '✨ Viajando…';
+    let t0 = null;
+    function step(ts) {
+      if (!t0) t0 = ts;
+      const p = Math.min((ts-t0)/dur, 1);
+      rocket.style.left = (90 + p*total) + 'px';
+      trail.style.width = (p*total) + 'px';
+      if (p < 1) { af[m] = requestAnimationFrame(step); }
+      else { btn.textContent = '🎉 ¡Llegó!'; setTimeout(() => resetAnim(m), 1600); }
+    }
+    af[m] = requestAnimationFrame(step);
+  }
+
+  function resetAnim(m) {
+    if (af[m]) cancelAnimationFrame(af[m]);
+    const r = document.getElementById(m+'-rocket');
+    const t = document.getElementById(m+'-trail');
+    const b = document.getElementById(m+'-btn');
+    if (r) r.style.left = '90px';
+    if (t) t.style.width = '0';
+    if (b) b.textContent = '▶ Lanzar';
+  }
+
+  // ── CLOCK EMOJIS ──
+  const clocks = ['🕛','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚'];
+  function ck(r) { return clocks[Math.floor(r*12)%12]; }
+
+  // ── CALCS ──
+  function calcL() {
+    const L2=parseFloat(document.getElementById('L-L0').value);
+    const v=parseFloat(document.getElementById('L-v').value);
+    const rad=Math.sqrt(1-v*v);
+    const L1=L2*rad, pct=(1-rad)*100;
+    document.getElementById('L-L0d').textContent = L2+' m';
+    document.getElementById('L-vd').textContent  = v.toFixed(2)+'c';
+    document.getElementById('L-r0').textContent  = f(L2,0);
+    document.getElementById('L-r1').textContent  = f(L1,1);
+    document.getElementById('L-rg').textContent  = f(rad,4);
+    document.getElementById('L-rpct').textContent= f(pct,1);
+    document.getElementById('L-b0').style.width   = '100%';
+    document.getElementById('L-b0-val').textContent = f(L2,0)+' m';
+    document.getElementById('L-b1').style.width   = Math.max(4,rad*100)+'%';
+    document.getElementById('L-b1-val').textContent = f(L1,1)+' m';
+  }
+
+  function calcT() {
+    const T2=parseFloat(document.getElementById('T-T0').value);
+    const v=parseFloat(document.getElementById('T-v').value);
+    const rad=Math.sqrt(1-v*v);
+    const T1=T2/rad;
+    document.getElementById('T-T0d').textContent = T2+' s';
+    document.getElementById('T-vd').textContent  = v.toFixed(2)+'c';
+    document.getElementById('T-r0').textContent  = f(T2,1);
+    document.getElementById('T-r1').textContent  = f(T1,1);
+    document.getElementById('T-rg').textContent  = f(rad,4);
+    document.getElementById('T-rdt').textContent = f(T1-T2,1);
+    document.getElementById('T-cv0').textContent = f(T2,1)+' s';
+    document.getElementById('T-cv1').textContent = f(T1,1)+' s';
+    document.getElementById('T-clk0').textContent= ck(T2/200);
+    document.getElementById('T-clk1').textContent= ck(T1/200);
+  }
+
+  function calcM() {
+    const m2=parseFloat(document.getElementById('M-m0').value);
+    const v=parseFloat(document.getElementById('M-v').value);
+    const rad=Math.sqrt(1-v*v);
+    const m1=m2/rad, dm=m1-m2;
+    document.getElementById('M-m0d').textContent     = m2+' kg';
+    document.getElementById('M-vd').textContent      = v.toFixed(2)+'c';
+    document.getElementById('M-r0').textContent      = f(m2,1);
+    document.getElementById('M-r1').textContent      = f(m1,1);
+    document.getElementById('M-rg').textContent      = f(rad,4);
+    document.getElementById('M-rdm').textContent     = f(dm,1);
+    document.getElementById('M-scene-val').textContent = f(m1,1)+' kg';
+    document.getElementById('M-b0').style.width     = Math.min(100,(m2/m1*100))+'%';
+    document.getElementById('M-b0-val').textContent  = f(m2,1)+' kg';
+    document.getElementById('M-b1-val').textContent  = f(m1,1)+' kg';
+  }
+
+  // init
+  makeStars('L-scene'); makeStars('T-scene'); makeStars('M-scene');
+  calcL(); calcT(); calcM();
+  // position after layout
+  setTimeout(() => { positionRocket('L'); positionRocket('T'); positionRocket('M'); }, 50);
+</script>
+</body>
+</html>
