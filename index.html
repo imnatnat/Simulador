@@ -15,7 +15,7 @@
     height: 100vh; overflow: hidden;
   }
 
-  /* ── TOP BAR ── */
+  /* TOP BAR */
   .topbar {
     background: #000;
     display: flex; align-items: center; gap: 12px;
@@ -30,11 +30,11 @@
   .tab-btn:not(.active) { background: rgba(255,255,255,0.15); color: #ccc; }
   .tab-btn:not(.active):hover { background: rgba(255,255,255,0.25); }
 
-  /* ── PANELS ── */
+  /* PANELS */
   .panel { display: none; flex: 1; flex-direction: row; min-height: 0; }
   .panel.active { display: flex; }
 
-  /* ── SPACE SCENE (left, fills all remaining space) ── */
+  /* SPACE */
   .scene-wrap {
     position: relative;
     flex: 1;
@@ -43,7 +43,7 @@
     border-right: 1px solid rgba(255,255,255,0.07);
   }
 
-  /* Earth/Moon centered vertically and at their horizontal edges */
+  /* Earth/Moon */
   .scene-earth {
     position: absolute;
     left: 30px; top: 50%; transform: translateY(-50%);
@@ -57,7 +57,7 @@
     filter: drop-shadow(0 0 10px rgba(255,255,180,0.3));
   }
 
-  /* observer on top of earth */
+  /* observer */
   .observer {
     position: absolute;
     left: 38px;
@@ -71,16 +71,15 @@
     filter: drop-shadow(0 2px 8px rgba(255,140,0,0.8));
   }
 
-  /* orange trail */
+  /* trail */
   .trail-line {
     position: absolute;
     height: 3px; border-radius: 3px;
     left: 90px; width: 0;
     background: linear-gradient(to right, transparent, #ff8c00);
-    /* top set by JS */
   }
 
-  /* ── RIGHT SIDEBAR ── */
+  /* SIDEBAR */
   .controls {
     width: 260px; flex-shrink: 0;
     background: #000;
@@ -114,7 +113,7 @@
   }
   .slider-row input[type=range] { width: 100%; accent-color: #e94560; }
 
-  /* result rows — value on top, label below */
+  /* result */
   .result-grid {
     display: grid; grid-template-columns: 1fr 1fr;
     gap: 8px; margin-top: 4px;
@@ -128,7 +127,7 @@
   .result-cell .runit { font-size: 10px; color: #555; margin-left: 2px; }
   .result-cell .rlbl { font-size: 10px; color: #666; margin-top: 3px; }
 
-  /* theme colors */
+  /* theme */
   .theme-L .rval { color: #5be8b0; }
   .theme-T .rval { color: #7eb8ff; }
   .theme-M .rval { color: #f0a060; }
@@ -151,7 +150,7 @@
   }
   .btn-reset:hover { background: rgba(255,255,255,0.1); }
 
-  /* formula — at the bottom of sidebar */
+  /* formula */
   .formula-box {
     margin-top: auto;
     background: rgba(126,184,255,0.07);
@@ -162,7 +161,7 @@
   }
   .formula-box b { color: #a8d4ff; font-size: 13px; }
 
-  /* length/mass bars */
+  /* longuitud masa */
   .bar-viz { margin: 8px 0; }
   .bv-row { margin: 7px 0; }
   .bv-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
@@ -174,7 +173,7 @@
   .bv-rest  { background: rgba(91,232,176,0.35); }
   .bv-moved { background: rgba(91,232,176,0.65); }
 
-  /* clock overlay — top center */
+  /* clock */
   .clock-overlay {
     position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
     display: flex; gap: 20px;
@@ -187,7 +186,7 @@
   .clock-box .ck-lbl  { font-size: 10px; color: #888; margin-top: 2px; }
   .clock-box .ck-val  { font-size: 12px; font-weight: 700; color: #7eb8ff; }
 
-  /* mass overlay — top center */
+  /* masa */
   .mass-overlay {
     position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
     text-align: center;
@@ -211,7 +210,7 @@
   <button class="tab-btn" onclick="showTab(2,this)">⚖️ Masa</button>
 </div>
 
-<!-- ══════ LONGITUD ══════ -->
+<!-- LONGITUD -->
 <div class="panel active theme-L" id="p0">
   <div class="scene-wrap" id="L-scene">
     <div class="scene-earth">🌍</div>
@@ -290,7 +289,7 @@
   </div>
 </div>
 
-<!-- ══════ TIEMPO ══════ -->
+<!-- TIEMPO -->
 <div class="panel theme-T" id="p1">
   <div class="scene-wrap" id="T-scene">
     <div class="scene-earth">🌍</div>
@@ -365,7 +364,7 @@
   </div>
 </div>
 
-<!-- ══════ MASA ══════ -->
+<!-- MASA -->
 <div class="panel theme-M" id="p2">
   <div class="scene-wrap" id="M-scene">
     <div class="scene-earth">🌍</div>
@@ -453,7 +452,7 @@
   function gam(vp) { const b=vp/100; return 1/Math.sqrt(1-b*b); }
   function f(n,d=2) { return isFinite(n) ? parseFloat(n.toFixed(d)) : '∞'; }
 
-  // ── TABS ──
+  // TABS
   function showTab(i, btn) {
     document.querySelectorAll('.panel').forEach((p,j) => p.classList.toggle('active', j===i));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -461,7 +460,7 @@
     positionRocket(i===0?'L':i===1?'T':'M');
   }
 
-  // ── STARS — fills the whole scene ──
+  // STARS
   function makeStars(id) {
     const el = document.getElementById(id);
     for (let i = 0; i < 80; i++) {
@@ -473,7 +472,7 @@
     }
   }
 
-  // ── POSITION rocket & trail at vertical center ──
+  // POSITION rocket
   function positionRocket(m) {
     const scene = document.getElementById(m+'-scene');
     if (!scene) return;
@@ -484,11 +483,11 @@
     const obsEl    = document.getElementById(m+'-obs') || scene.querySelector('.observer');
     if (rocketEl) rocketEl.style.top = (mid - 20) + 'px';
     if (trailEl)  trailEl.style.top  = (mid + 2)  + 'px';
-    // observer sits just above the earth
+    // observer
     if (obsEl) obsEl.style.top = (mid - 52) + 'px';
   }
 
-  // ── ANIMATION ──
+  // ANIMATION
   const af = {};
   function launch(m) {
     resetAnim(m);
@@ -523,11 +522,11 @@
     if (b) b.textContent = '▶ Lanzar';
   }
 
-  // ── CLOCK EMOJIS ──
+  // CLOCK EMOJIS
   const clocks = ['🕛','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚'];
   function ck(r) { return clocks[Math.floor(r*12)%12]; }
 
-  // ── CALCS ──
+  // CALCS
   function calcL() {
     const L2=parseFloat(document.getElementById('L-L0').value);
     const v=parseFloat(document.getElementById('L-v').value);
